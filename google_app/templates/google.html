@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tìm kiếm Google & Lấy thông tin</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script>
+        function showLoading() {
+            document.getElementById("loading").style.display = "block";
+        }
+    </script>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <a href="/" style="display:block; margin-top:20px;">⬅️ Quay lại trang chủ</a>
+        <h1 class="text-center">Google Search + Cào Thông Tin</h1>
+        <form method="POST" onsubmit="showLoading()">
+            <div class="form-group">
+                <label for="query">Nhập từ khóa tìm kiếm:</label>
+                <input type="text" class="form-control" id="query" name="query" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Bắt đầu tìm kiếm</button>
+        </form>
+
+        <!-- Hiển thị đang xử lý -->
+        <div id="loading" style="display:none;" class="text-center mt-3">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p>Đang xử lý dữ liệu, vui lòng đợi...</p>
+        </div>
+
+        {% if elapsed_time %}
+            <div class="alert alert-success mt-4">
+                ✅ Thời gian xử lý: <strong>{{ elapsed_time }} giây</strong>
+            </div>
+        {% endif %}
+
+        {% if file_path %}
+            <p>✅ Tìm kiếm hoàn tất. Bạn có thể tải file CSV tại đây:</p>
+            <a href="{{ url_for('google.download_file', filename=file_path) }}" download>Tải file kết quả CSV</a>
+        {% endif %}
+    </div>
+</body>
+</html>

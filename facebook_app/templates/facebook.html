@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Facebook Group Scraper</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script>
+        function showLoading() {
+            document.getElementById("loading").style.display = "block";
+        }
+    </script>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <a href="/" style="display:block; margin-top:20px;">⬅️ Quay lại trang chủ</a>
+        <h1 class="text-center mb-4">Facebook Group Scraper</h1>
+        <form method="POST" onsubmit="showLoading()">
+            <div class="form-group">
+                <label for="email">Tên đăng nhập Facebook:</label>
+                <input type="text" class="form-control" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Mật khẩu:</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="group_url">Đường dẫn Group Facebook:</label>
+                <input type="text" class="form-control" id="group_url" name="group_url" required>
+                <small class="form-text text-muted">Ví dụ: https://www.facebook.com/groups/295931577185665</small>
+            </div>
+            <p class="text-danger"><strong>🔒 Ghi chú:</strong> Đảm bảo tài khoản Facebook đã tham gia group này.</p>
+            <button type="submit" class="btn btn-primary">Bắt đầu cào dữ liệu</button>
+        </form>
+
+        <!-- Spinner loading -->
+        <div id="loading" style="display:none;" class="text-center mt-4">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Đang xử lý, vui lòng đợi vài phút...</p>
+        </div>
+
+        {% if elapsed_time %}
+            <div class="alert alert-success mt-4">
+                ✅ Thời gian xử lý: <strong>{{ elapsed_time }} giây</strong>
+            </div>
+        {% endif %}
+
+        {% if file_path %}
+            <div class="alert alert-info mt-2">
+                ✅ Cào dữ liệu thành công. Bạn có thể tải kết quả tại đây:
+                <br>
+                <a href="{{ url_for('facebook.download_file', filename=file_path) }}" class="btn btn-success mt-2" download>
+                    📄 Tải file CSV
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
