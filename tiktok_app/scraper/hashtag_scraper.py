@@ -56,7 +56,7 @@ def scrape_hashtag(hashtag, output_file, max_videos=200, scroll_limit=15):
                             'Profile URL': f"https://www.tiktok.com/@{username}"
                         })
 
-                        print(f"Đã thu thập {len(data)} kênh.")
+                        # print(f"Đã thu thập {len(data)} kênh.")
 
                         if len(data) >= max_videos:
                             break

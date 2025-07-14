@@ -8,8 +8,8 @@ google_blueprint = Blueprint('google', __name__,
                              template_folder='templates',
                              static_folder='static')
 
-API_KEY = "AIzaSyDBKegSqdzSfGZcfaucon7j-9CHnLDaoKg"
-SEARCH_ENGINE_ID = "211161663500d4946"
+API_KEY = os.getenv("API_KEY")
+SEARCH_ENGINE_ID = os.getenv("SEARCH_ENGINE_ID")
 
 def clean_phone(phone):
     try:
