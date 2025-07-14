@@ -12,13 +12,8 @@ from tiktok_captcha_solver import make_undetected_chromedriver_solver
 import chromedriver_autoinstaller
 
 def scrape_single_batch(batch_data, batch_num, total_batch, output_dir):
-<<<<<<< HEAD
     chromedriver_autoinstaller.install()
     print(f"\n🔵 [Batch {batch_num}] Khởi động trình duyệt...")
-=======
-    # chromedriver_autoinstaller.install()
-    # print(f"\n🔵 [Batch {batch_num}] Khởi động trình duyệt...")
->>>>>>> f1f5772 (add)
     # api_key = "5fe871299e9a4e80267ba952e4b8df24"
     # options = uc.ChromeOptions()
     # service = Service("chromedriver.exe")
