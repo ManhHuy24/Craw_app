@@ -13,7 +13,6 @@ import chromedriver_autoinstaller
 
 def scrape_single_batch(batch_data, batch_num, total_batch, output_dir):
     chromedriver_autoinstaller.install()
-    print(f"\n🔵 [Batch {batch_num}] Khởi động trình duyệt...")
     # api_key = "5fe871299e9a4e80267ba952e4b8df24"
     # options = uc.ChromeOptions()
     # service = Service("chromedriver.exe")
@@ -30,7 +29,6 @@ def scrape_single_batch(batch_data, batch_num, total_batch, output_dir):
 
     for i, (index, row) in enumerate(batch_data.iterrows(), start=1):
         url = row['Profile URL']
-        # print(f"[Batch {batch_num}/{total_batch}] ➤ ({i}/{len(batch_data)}) {url}")
         try:
             driver.get(url)
             time.sleep(5)
@@ -48,8 +46,6 @@ def scrape_single_batch(batch_data, batch_num, total_batch, output_dir):
     driver.quit()
     batch_file = os.path.join(output_dir, f"batch_{batch_num}.csv")
     pd.DataFrame(results).to_csv(batch_file, index=False, encoding='utf-8-sig')
-    # print(f"✅ [Batch {batch_num}] Đã lưu vào {batch_file}")
-
 
 def scrape_profiles(input_file, output_file, batch_size=50, delay_between_batches=15):
     df = pd.read_csv(input_file)
@@ -57,8 +53,6 @@ def scrape_profiles(input_file, output_file, batch_size=50, delay_between_batche
     batch_count = (total + batch_size - 1) // batch_size
     output_dir = os.path.dirname(output_file)
     os.makedirs(output_dir, exist_ok=True)
-
-    # print(f"📦 Tổng số profile: {total}. Sẽ chia thành {batch_count} batch (mỗi batch {batch_size} dòng)...")
 
     processes = []
 
@@ -69,7 +63,6 @@ def scrape_profiles(input_file, output_file, batch_size=50, delay_between_batche
         p.start()
         processes.append(p)
         if i < batch_count - 1:
-            # print(f"⏳ Chờ {delay_between_batches} giây để mở batch tiếp theo...")
             time.sleep(delay_between_batches)
 
     # Đợi tất cả batch hoàn thành
@@ -77,7 +70,6 @@ def scrape_profiles(input_file, output_file, batch_size=50, delay_between_batche
         p.join()
 
     # Gộp tất cả các file batch
-    # print("📥 Đang gộp dữ liệu từ các batch...")
     all_results = []
     for i in range(1, batch_count + 1):
         batch_file = os.path.join(output_dir, f"batch_{i}.csv")
@@ -89,6 +81,5 @@ def scrape_profiles(input_file, output_file, batch_size=50, delay_between_batche
     if all_results:
         final_df = pd.concat(all_results, ignore_index=True)
         final_df.to_csv(output_file, index=False, encoding='utf-8-sig')
-        # print(f"✅ Đã lưu kết quả cuối cùng tại: {output_file}")
     else:
         print("❌ Không có dữ liệu nào được thu thập.")
