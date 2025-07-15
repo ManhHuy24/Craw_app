@@ -2,8 +2,6 @@ from flask import Flask, render_template
 from tiktok_app.routes import tiktok_blueprint
 from google_app.routes import google_blueprint
 from facebook_app.routes import facebook_blueprint
-from dotenv import load_dotenv
-import os
 
 app = Flask(__name__)
 
