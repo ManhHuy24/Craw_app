@@ -47,7 +47,7 @@ def index():
 
         # Gửi yêu cầu đến API Google
         try:
-            for i in range(1, 2):
+            for i in range(1, 100, 10):
                 params = {'key': API_KEY, 'cx': SEARCH_ENGINE_ID, 'q': query, 'start': i}
                 r = httpx.get('https://www.googleapis.com/customsearch/v1', params=params, timeout=10).json()
                 search_results.extend(r.get('items', []))
