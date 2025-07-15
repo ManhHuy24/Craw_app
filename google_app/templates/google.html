@@ -13,12 +13,18 @@
     <div class="container mt-5">
         <a href="/" style="display:block; margin-top:20px;">⬅️ Quay lại trang chủ</a>
         <h1 class="text-center">Google Search + Cào Thông Tin</h1>
+
         <form method="POST" onsubmit="showLoading()">
             <div class="form-group">
                 <label for="query">Nhập từ khóa tìm kiếm:</label>
-                <input type="text" class="form-control" id="query" name="query" required>
+                <input type="text" class="form-control" id="query" name="query" required
+                       value="{{ request.form.query if request.form.query else '' }}">
             </div>
-            <button type="submit" class="btn btn-primary">Bắt đầu tìm kiếm</button>
+            <button type="submit" name="action" value="search" class="btn btn-primary">🔍 Bắt đầu tìm kiếm</button>
+
+            {% if file_path %}
+                <button type="submit" name="action" value="more" class="btn btn-success ml-2">➕ Tải thêm kết quả</button>
+            {% endif %}
         </form>
 
         <!-- Hiển thị đang xử lý -->
@@ -34,8 +40,11 @@
         {% endif %}
 
         {% if file_path %}
-            <p>✅ Tìm kiếm hoàn tất. Bạn có thể tải file CSV tại đây:</p>
-            <a href="{{ url_for('google.download_file', filename=file_path) }}" download>Tải file kết quả CSV</a>
+            <div class="mt-3">
+                <p>📄 Đã thu thập: <strong>{{ record_count }} kết quả</strong>.</p>
+                <p>⬇️ Bạn có thể tải file kết quả CSV tại đây:</p>
+                <a href="{{ url_for('google.download_file', filename=file_path) }}" class="btn btn-outline-secondary" download>Tải file kết quả CSV</a>
+            </div>
         {% endif %}
     </div>
 </body>

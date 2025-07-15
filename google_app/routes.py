@@ -36,6 +36,7 @@ def clean_phone(phone):
 def index():
     elapsed_time = None
     file_path = None
+    record_count = None
 
     if request.method == 'POST':
         query = request.form.get('query')
@@ -44,35 +45,60 @@ def index():
 
         start_time = time.time()
         search_results = []
+        MAX_RESULTS = 30
+        start_index = 1
 
-        # Gửi yêu cầu đến API Google
+        # Đường dẫn lưu file kết quả
+        os.makedirs('static/downloads', exist_ok=True)
+        safe_query = query.replace(" ", "_")
+        filename = f'google_{safe_query}.csv'
+        filepath = os.path.join('static/downloads', filename)
+
+        # Nếu file đã tồn tại, đọc dữ liệu cũ
+        if os.path.exists(filepath):
+            old_df = pd.read_csv(filepath)
+            already_titles = set(old_df['Tiêu đề'].dropna().unique())
+            start_index = len(old_df) + 1
+        else:
+            old_df = pd.DataFrame()
+            already_titles = set()
+
+        # Gửi yêu cầu đến Google API (giới hạn 30 dòng mới)
         try:
-            for i in range(1, 100, 10):
+            for i in range(start_index, start_index + MAX_RESULTS, 10):
                 params = {'key': API_KEY, 'cx': SEARCH_ENGINE_ID, 'q': query, 'start': i}
                 r = httpx.get('https://www.googleapis.com/customsearch/v1', params=params, timeout=10).json()
-                search_results.extend(r.get('items', []))
+                new_items = r.get('items', [])
+                search_results.extend(new_items)
         except Exception as e:
             return render_template('google.html', error=f'Lỗi khi gọi Google API: {e}')
 
         if not search_results:
-            return render_template('google.html', error='Không tìm thấy kết quả nào.')
+            return render_template('google.html', error='Không tìm thấy kết quả mới.')
 
-        # Chuyển đổi sang DataFrame
-        df = pd.json_normalize(search_results)
+        # Chuyển sang DataFrame
+        new_df = pd.json_normalize(search_results)
         expected_cols = ['title', 'displayLink', 'snippet']
-        if not all(col in df.columns for col in expected_cols):
+        if not all(col in new_df.columns for col in expected_cols):
             return render_template('google.html', error='Dữ liệu trả về không hợp lệ.')
 
-        df = df[expected_cols]
-        df.rename(columns={'title': 'Tiêu đề', 'displayLink': 'Đường dẫn', 'snippet': 'Mô tả'}, inplace=True)
-        df.drop_duplicates(subset='Tiêu đề', inplace=True)
+        new_df = new_df[expected_cols]
+        new_df.rename(columns={'title': 'Tiêu đề', 'displayLink': 'Đường dẫn', 'snippet': 'Mô tả'}, inplace=True)
+        new_df.drop_duplicates(subset='Tiêu đề', inplace=True)
 
-        df['Địa chỉ'] = ''
-        df['Điện thoại'] = ''
-        df['Email'] = ''
+        # Loại bỏ các dòng đã có sẵn
+        new_df = new_df[~new_df['Tiêu đề'].isin(already_titles)]
 
-        # Cào nội dung từng trang
-        for i, row in df.iterrows():
+        # Gộp vào dataframe tổng
+        df = pd.concat([old_df, new_df], ignore_index=True)
+
+        # Thêm cột nếu chưa có
+        for col in ['Địa chỉ', 'Điện thoại', 'Email']:
+            if col not in df.columns:
+                df[col] = ''
+
+        # Chỉ xử lý những dòng mới thêm chưa có dữ liệu
+        for i, row in df[df['Điện thoại'] == ''].iterrows():
             try:
                 url = 'https://' + row['Đường dẫn']
                 headers = {'User-Agent': 'Mozilla/5.0'}
@@ -86,11 +112,10 @@ def index():
                 # Tìm email
                 email_matches = re.findall(r'\b\S+@\S+\b', text)
 
-                # Tìm số điện thoại có liên quan
+                # Tìm số điện thoại
                 phone_keywords = ['hotline', 'sđt', 'sdt', 'số điện thoại', 'liên hệ', 'tel']
                 phone_lines = [line for line in soup.stripped_strings if any(k in line.lower() for k in phone_keywords)]
                 phone_related_text = ' '.join(phone_lines)
-
                 phone_matches = re.findall(r'(?:(?:\+84|0|0084)?(?:[\s\-.]?\d){8,10})', phone_related_text)
                 if not phone_matches:
                     phone_matches = re.findall(r'(?:(?:\+84|0|0084)?(?:[\s\-.]?\d){8,10})', all_content)
@@ -121,17 +146,14 @@ def index():
                 print(f"⚠️ Lỗi khi xử lý {row['Đường dẫn']}: {e}")
                 continue
 
-        # Ghi file CSV
-        os.makedirs('static/downloads', exist_ok=True)
-        safe_query = query.replace(" ", "_")
-        filename = f'google_{safe_query}.csv'
-        filepath = os.path.join('static/downloads', filename)
+        # Ghi lại file
         df.to_csv(filepath, index=False, encoding='utf-8-sig')
 
         elapsed_time = round(time.time() - start_time, 2)
         file_path = filename
+        record_count = len(df)
 
-    return render_template('google.html', elapsed_time=elapsed_time, file_path=file_path)
+    return render_template('google.html', elapsed_time=elapsed_time, file_path=file_path, record_count=record_count)
 
 @google_blueprint.route('/downloads/<filename>')
 def download_file(filename):
