@@ -38,16 +38,32 @@ def index():
     file_path = None
 
     if request.method == 'POST':
-        query = request.form['query']
+        query = request.form.get('query')
+        if not query:
+            return render_template('google.html', error='Vui lòng nhập từ khóa.')
+
         start_time = time.time()
-
         search_results = []
-        for i in range(1, 2):
-            params = {'key': API_KEY, 'cx': SEARCH_ENGINE_ID, 'q': query, 'start': i}
-            r = httpx.get('https://www.googleapis.com/customsearch/v1', params=params).json()
-            search_results.extend(r.get('items', []))
 
-        df = pd.json_normalize(search_results)[['title', 'displayLink', 'snippet']]
+        # Gửi yêu cầu đến API Google
+        try:
+            for i in range(1, 2):
+                params = {'key': API_KEY, 'cx': SEARCH_ENGINE_ID, 'q': query, 'start': i}
+                r = httpx.get('https://www.googleapis.com/customsearch/v1', params=params, timeout=10).json()
+                search_results.extend(r.get('items', []))
+        except Exception as e:
+            return render_template('google.html', error=f'Lỗi khi gọi Google API: {e}')
+
+        if not search_results:
+            return render_template('google.html', error='Không tìm thấy kết quả nào.')
+
+        # Chuyển đổi sang DataFrame
+        df = pd.json_normalize(search_results)
+        expected_cols = ['title', 'displayLink', 'snippet']
+        if not all(col in df.columns for col in expected_cols):
+            return render_template('google.html', error='Dữ liệu trả về không hợp lệ.')
+
+        df = df[expected_cols]
         df.rename(columns={'title': 'Tiêu đề', 'displayLink': 'Đường dẫn', 'snippet': 'Mô tả'}, inplace=True)
         df.drop_duplicates(subset='Tiêu đề', inplace=True)
 
@@ -55,6 +71,7 @@ def index():
         df['Điện thoại'] = ''
         df['Email'] = ''
 
+        # Cào nội dung từng trang
         for i, row in df.iterrows():
             try:
                 url = 'https://' + row['Đường dẫn']
@@ -66,10 +83,10 @@ def index():
                 attributes = ' '.join([str(tag) for tag in soup.find_all()])
                 all_content = text + ' ' + attributes
 
-                # Email
+                # Tìm email
                 email_matches = re.findall(r'\b\S+@\S+\b', text)
 
-                # Số điện thoại (ưu tiên các dòng chứa từ khóa)
+                # Tìm số điện thoại có liên quan
                 phone_keywords = ['hotline', 'sđt', 'sdt', 'số điện thoại', 'liên hệ', 'tel']
                 phone_lines = [line for line in soup.stripped_strings if any(k in line.lower() for k in phone_keywords)]
                 phone_related_text = ' '.join(phone_lines)
@@ -87,23 +104,25 @@ def index():
                     if cleaned:
                         cleaned_phones.append(cleaned)
 
-                cleaned_phones = list(dict.fromkeys(cleaned_phones))  # remove duplicates
+                cleaned_phones = list(dict.fromkeys(cleaned_phones))
 
-                # Địa chỉ
+                # Tìm địa chỉ
                 address = ''
                 for line in soup.stripped_strings:
                     if any(keyword in line.lower() for keyword in ['địa chỉ', 'address']):
                         address = line
                         break
 
-                # Gán vào DataFrame
                 df.at[i, 'Email'] = email_matches[0] if email_matches else ''
                 df.at[i, 'Điện thoại'] = cleaned_phones[0] if cleaned_phones else ''
                 df.at[i, 'Địa chỉ'] = address
 
             except Exception as e:
+                print(f"⚠️ Lỗi khi xử lý {row['Đường dẫn']}: {e}")
                 continue
 
+        # Ghi file CSV
+        os.makedirs('static/downloads', exist_ok=True)
         safe_query = query.replace(" ", "_")
         filename = f'google_{safe_query}.csv'
         filepath = os.path.join('static/downloads', filename)
