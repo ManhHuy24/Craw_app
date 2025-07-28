@@ -5,18 +5,27 @@
     <title>Scrape Hashtag TikTok</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script>
+        let seconds = 0;
+        let timerInterval;
+
         function startScraping() {
             document.getElementById("loading").style.display = "block";
-            document.getElementById("timer").innerText = "0";
-            let seconds = 0;
-            window.timerInterval = setInterval(() => {
+            seconds = 0;
+            timerInterval = setInterval(() => {
                 seconds++;
                 document.getElementById("timer").innerText = seconds;
             }, 1000);
         }
 
         function stopTimer() {
-            clearInterval(window.timerInterval);
+            clearInterval(timerInterval);
+        }
+
+        function loadNextBatch() {
+            const form = document.getElementById("scrapeForm");
+            const offset = document.getElementById("offset");
+            offset.value = parseInt(offset.value) + 20;
+            form.submit();
         }
     </script>
 </head>
@@ -25,26 +34,46 @@
         <a href="/" style="display:block; margin-bottom:20px;">⬅️ Quay lại trang chủ</a>
 
         <h1 class="text-center">TikTok Hashtag Scraper</h1>
-        <form action="/tiktok/scrape" method="post" onsubmit="startScraping();">
+        <form id="scrapeForm" action="/tiktok/" method="post" onsubmit="startScraping();">
             <div class="form-group">
                 <label for="hashtag">Nhập Hashtag (không cần dấu #):</label>
-                <input type="text" class="form-control" id="hashtag" name="hashtag" placeholder="Ví dụ: campingsaigon" required>
+                <input type="text" class="form-control" id="hashtag" name="hashtag" value="{{ hashtag or '' }}" required>
+                <input type="hidden" name="offset" id="offset" value="{{ offset or 0 }}">
             </div>
-            <button type="submit" class="btn btn-primary">Bắt đầu cào</button>
+            <button type="submit" class="btn btn-primary">🔍 Bắt đầu cào</button>
         </form>
 
-        <!-- Hiển thị đang xử lý -->
+        <!-- Loading -->
         <div id="loading" style="display:none;" class="text-center mt-4">
             <div class="spinner-border text-primary" role="status"></div>
             <p>⏳ Đang xử lý... Thời gian đã trôi qua: <span id="timer">0</span> giây</p>
         </div>
 
-        {% if download_link %}
+        {% if file_path %}
             <div class="alert alert-success mt-4">
-                ✅ Hoàn tất cào dữ liệu TikTok!
+                <p>✅ Đã cào xong <strong>{{ record_count }}</strong> dòng trong <strong>{{ elapsed_time }}</strong> giây.</p>
+                <a href="{{ url_for('tiktok.download_file', filename=file_path) }}" class="btn btn-primary">
+                    Tải file kết quả
+                </a>
             </div>
-            <p><a class="btn btn-success" href="{{ download_link }}" download>📥 Tải file kết quả CSV</a></p>
-            <script>stopTimer();</script>
+        {% endif %}
+
+        {% if error %}
+            <div class="alert alert-danger mt-4">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        {% if csv_exists %}
+            <a href="{{ url_for('tiktok.download_file', filename=hashtag + '.csv') }}" class="btn btn-success">Tải file CSV</a>
+        {% endif %}
+
+        {% if show_load_more %}
+            <form method="POST" onsubmit="startScraping();">
+                <input type="hidden" name="hashtag" value="{{ hashtag }}">
+                <input type="hidden" name="offset" value="{{ offset + 20 }}">
+                <button type="submit" class="btn btn-secondary mt-2">➕ Tải thêm kết quả</button>
+            </form>
         {% endif %}
     </div>
 </body>

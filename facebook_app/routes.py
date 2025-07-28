@@ -9,7 +9,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from datetime import datetime, timedelta
 from time import sleep, time
-from unidecode import unidecode
 import chromedriver_autoinstaller
 
 facebook_blueprint = Blueprint('facebook', __name__,
@@ -31,16 +30,16 @@ def index():
 
         start_time = time()
 
-        chromedriver_autoinstaller.install()
-        # service = Service("chromedriver.exe")
+        # chromedriver_autoinstaller.install()
+        service = Service("chromedriver.exe")
         options = Options()
-        options.add_argument("--headless=new")
+        # options.add_argument("--headless=new")
         options.add_argument("--start-maximized")
         options.add_argument("--disable-infobars")
         options.add_argument("--log-level=3")
-        browser = webdriver.Chrome(options=options)
+        # browser = webdriver.Chrome(options=options)
 
-        # browser = webdriver.Chrome(service=service)
+        browser = webdriver.Chrome(service=service, options=options)
         browser.get("http://facebook.com")
         sleep(3)
         browser.find_element(By.ID, "email").send_keys(email)
@@ -53,10 +52,10 @@ def index():
         user_data = []
         MAX_POSTS = 200
 
-        for _ in range(20):
+        for _ in range(30):
             browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            sleep(3)
-            post_divs = browser.find_elements(By.CLASS_NAME, "x1yztbdb")
+            sleep(5)
+            post_divs = browser.find_elements(By.CSS_SELECTOR, 'div.x1yztbdb.x1n2onr6.xh8yej3.x1ja2u2z')
 
             for div in post_divs:
                 try:
@@ -143,7 +142,6 @@ def index():
         else:
             combined_df = new_df
 
-        combined_df['Nội dung bài viết'] = combined_df['Nội dung bài viết'].apply(unidecode)
         combined_df.to_csv(csv_file, index=False, encoding="utf-8-sig")
         elapsed_time = round(time() - start_time, 2)
         file_path = f"facebook_group_{group_id}.csv"
