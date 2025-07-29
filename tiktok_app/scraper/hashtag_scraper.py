@@ -1,54 +1,59 @@
 # scraper/hashtag_scraper.py
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-import pandas as pd
-import os,time
-from tiktok_captcha_solver import make_undetected_chromedriver_solver
-from selenium_stealth import stealth
-import undetected_chromedriver as uc
-import chromedriver_autoinstaller
-
-API_KEY_TIKTOK = os.getenv("API_KEY_TIKTOK")
+from playwright.sync_api import sync_playwright, TimeoutError
+from tiktok_captcha_solver import make_playwright_solver_context
+from playwright_stealth import stealth_sync, StealthConfig
+import time, os
 
 def scrape_hashtag(hashtag, max_videos=20, scroll_limit=15):
-    chromedriver_autoinstaller.install()
-    # service = Service("chromedriver.exe")
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--start-maximized")
-    options.add_argument("--disable-infobars")
-    options.add_argument("--log-level=3")
-
-    driver = make_undetected_chromedriver_solver(API_KEY_TIKTOK, options=options)
-    # driver = webdriver.Chrome(options=options)
-    # driver = webdriver.Chrome(service=service, options=options)
-    url = f"https://www.tiktok.com/tag/{hashtag}"
-    driver.get(url)
-    time.sleep(5)
-
-    try:
-        refresh_btn = driver.find_element(By.XPATH, '//button[contains(text(), "Refresh")]')
-        print("➡️ Phát hiện nút Refresh, đang click...")
-        refresh_btn.click()
-        time.sleep(5)  # Cho trang chuyển sang captcha
-    except NoSuchElementException:
-        print("✅ Không phát hiện nút Refresh – tiếp tục...")
-
     data = []
     seen = set()
+    url = f"https://www.tiktok.com/tag/{hashtag}"
 
-    for _ in range(scroll_limit):
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(3)
+    API_KEY_TIKTOK = os.getenv("API_KEY_TIKTOK")
+    launch_args = [
+        "--disable-blink-features=AutomationControlled",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+    ]
+
+    with sync_playwright() as p:
+        context = make_playwright_solver_context(p, API_KEY_TIKTOK, headless=False, args=launch_args)
+        page = context.new_page()
+
+        # Apply stealth mode
+        stealth_config = StealthConfig(
+            navigator_languages=False,
+            navigator_vendor=False,
+            navigator_user_agent=False
+        )
+        stealth_sync(page, stealth_config)
+
         try:
-            video_container = driver.find_element(By.CSS_SELECTOR, "div.css-1qb12g8-DivThreeColumnContainer.eegew6e2")
-            videos = video_container.find_elements(By.CSS_SELECTOR, "div.css-x6y88p-DivItemContainerV2.e19c29qe7")
-            for v in videos:
-                try:
-                    username_element = v.find_element(By.CSS_SELECTOR, 'p[data-e2e="challenge-item-username"].user-name')
-                    username = username_element.text.strip()
+            print(f"Đang truy cập: {url}")
+            page.goto(url, timeout=60000)
+            time.sleep(10)
+
+            try:
+                refresh_btn = page.query_selector('//button[contains(text(), "Refresh")]')
+                if refresh_btn:
+                    print("➡️ Phát hiện nút Refresh, đang click...")
+                    refresh_btn.click()
+                    time.sleep(20)  # Đợi sau khi xử lý captcha
+
+                else:
+                    print("✅ Không phát hiện nút Refresh – tiếp tục...")
+            except Exception as e:
+                print(f"⚠️ Lỗi khi xử lý nút Refresh: {e}")
+
+            # 🔁 Cuộn trang và thu thập dữ liệu
+            for _ in range(scroll_limit):
+                page.mouse.wheel(0, 10000)
+                time.sleep(10)
+
+                elements = page.query_selector_all('p[data-e2e="challenge-item-username"].user-name')
+                for el in elements:
+                    username = el.inner_text().strip()
                     if username and username not in seen:
                         seen.add(username)
                         data.append({
@@ -56,12 +61,13 @@ def scrape_hashtag(hashtag, max_videos=20, scroll_limit=15):
                             'Profile URL': f"https://www.tiktok.com/@{username}"
                         })
                         if len(data) >= max_videos:
-                            driver.quit()
+                            context.close()
                             return data
-                except:
-                    continue
-        except:
-            continue
-    time.sleep(10)
-    driver.quit()
+
+        except TimeoutError:
+            print("❌ Timeout khi truy cập TikTok.")
+        except Exception as e:
+            print(f"❌ Lỗi khác khi cào dữ liệu: {e}")
+
+        context.close()
     return data
