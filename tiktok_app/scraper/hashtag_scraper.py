@@ -39,7 +39,7 @@ def scrape_hashtag(hashtag, max_videos=20, scroll_limit=15):
                 if refresh_btn:
                     print("➡️ Phát hiện nút Refresh, đang click...")
                     refresh_btn.click()
-                    time.sleep(20)  # Đợi sau khi xử lý captcha
+                    time.sleep(10)  # Đợi sau khi xử lý captcha
 
                 else:
                     print("✅ Không phát hiện nút Refresh – tiếp tục...")

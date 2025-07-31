@@ -14,20 +14,16 @@
         <a href="/" style="display:block; margin-top:20px;">⬅️ Quay lại trang chủ</a>
         <h1 class="text-center">Google Search + Cào Thông Tin</h1>
 
-        <form method="POST" onsubmit="showLoading()">
+        <form method="POST" enctype="multipart/form-data" onsubmit="showLoading()">
             <div class="form-group">
-                <label for="query">Nhập từ khóa tìm kiếm:</label>
-                <input type="text" class="form-control" id="query" name="query" required
-                       value="{{ request.form.query if request.form.query else '' }}">
+                <label for="query">Nhập từ khóa tìm kiếm (hoặc tải file):</label>
+                <input type="text" class="form-control" id="query" name="query" value="{{ request.form.query if request.form.query else '' }}">
+                <small class="form-text text-muted">Bạn có thể nhập từ khóa hoặc chọn file chứa nhiều từ khóa.</small>
+                <input type="file" class="form-control mt-2" name="file" accept=".csv,.xlsx">
             </div>
-            <button type="submit" name="action" value="search" class="btn btn-primary">🔍 Bắt đầu tìm kiếm</button>
-
-            {% if file_path %}
-                <button type="submit" name="action" value="more" class="btn btn-success ml-2">➕ Tải thêm kết quả</button>
-            {% endif %}
+            <button type="submit" class="btn btn-primary">🔍 Bắt đầu tìm kiếm</button>
         </form>
 
-        <!-- Hiển thị đang xử lý -->
         <div id="loading" style="display:none;" class="text-center mt-3">
             <div class="spinner-border text-primary" role="status"></div>
             <p>Đang xử lý dữ liệu, vui lòng đợi...</p>
@@ -39,12 +35,20 @@
             </div>
         {% endif %}
 
-        {% if file_path %}
+        {% if generated_files %}
             <div class="mt-3">
-                <p>📄 Đã thu thập: <strong>{{ record_count }} kết quả</strong>.</p>
-                <p>⬇️ Bạn có thể tải file kết quả CSV tại đây:</p>
-                <a href="{{ url_for('google.download_file', filename=file_path) }}" class="btn btn-outline-secondary" download>Tải file kết quả CSV</a>
+                <p>📄 Tổng số kết quả: <strong>{{ record_count }}</strong>.</p>
+                <p>⬇️ Các file CSV đã tạo:</p>
+                <ul>
+                {% for f in generated_files %}
+                    <li><a href="{{ url_for('google.download_file', filename=f) }}">{{ f }}</a></li>
+                {% endfor %}
+                </ul>
             </div>
+        {% endif %}
+
+        {% if error %}
+            <div class="alert alert-danger mt-3">{{ error }}</div>
         {% endif %}
     </div>
 </body>
